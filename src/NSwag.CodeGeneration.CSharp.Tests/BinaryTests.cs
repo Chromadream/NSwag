@@ -107,6 +107,131 @@ components:
             //// Assert
             Assert.Contains("Microsoft.AspNetCore.Http.IFormFile body", code);
             Assert.DoesNotContain("FromBody]", code);
+        }        
+        
+        [Fact]
+        public async Task when_body_is_a_schema_then_schema_is_used_as_parameter_in_CSharp_ASPNetCore()
+        {
+            var yaml = @"openapi: 3.0.0
+servers:
+  - url: https://www.example.com/
+info:
+  version: '2.0.0'
+  title: 'Test API'   
+paths:
+  /files:
+    post:
+      tags:
+        - Files
+      summary: 'Add File'
+      operationId: addFile
+      responses:
+        '200':
+          description: 'something'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileToken'
+      requestBody:
+       content:
+         multipart/form-data:
+           schema:
+             $ref: '#/components/schemas/UploadRequest'
+components:
+  schemas:
+    FileToken:
+      type: object
+      required:
+        - fileId    
+      properties:  
+        fileId:
+          type: string
+          format: uuid
+    UploadRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        orderId:
+          type: string
+          format: uuid";
+
+            var document = await OpenApiYamlDocument.FromYamlAsync(yaml);
+
+            //// Act
+            CSharpControllerGeneratorSettings settings = new CSharpControllerGeneratorSettings();
+            settings.ControllerTarget = CSharpControllerTarget.AspNetCore;
+            var codeGenerator = new CSharpControllerGenerator(document, settings);
+            var code = codeGenerator.GenerateFile();
+            
+            //// Assert
+            Assert.Contains("UploadRequest body", code);
+            Assert.Contains("public partial class UploadRequest", code);
+            Assert.DoesNotContain("FromBody]", code);
+        }
+        
+        [Fact]
+        public async Task When_body_has_multiple_parameters_then_all_parameter_is_used_in_CSharp_ASPNetCore()
+        {
+            var yaml = @"openapi: 3.0.0
+servers:
+  - url: https://www.example.com/
+info:
+  version: '2.0.0'
+  title: 'Test API'   
+paths:
+  /files:
+    post:
+      tags:
+        - Files
+      summary: 'Add File'
+      operationId: addFile
+      responses:
+        '200':
+          description: 'something'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FileToken'
+      requestBody:
+       content:
+         multipart/form-data:
+           schema:
+             type: object
+             required:
+               - file
+             properties:
+               file:
+                  type: string
+                  format: binary
+               id:
+                 type: string
+                 format: uuid
+components:
+  schemas:
+    FileToken:
+      type: object
+      required:
+        - fileId    
+      properties:  
+        fileId:
+          type: string
+          format: uuid";
+
+            var document = await OpenApiYamlDocument.FromYamlAsync(yaml);
+
+            //// Act
+            CSharpControllerGeneratorSettings settings = new CSharpControllerGeneratorSettings();
+            settings.ControllerTarget = CSharpControllerTarget.AspNetCore;
+            var codeGenerator = new CSharpControllerGenerator(document, settings);
+            var code = codeGenerator.GenerateFile();
+            
+            //// Assert
+            Assert.Contains("id", code);
+            Assert.DoesNotContain("FromBody]", code);
         }
 
         [Fact]

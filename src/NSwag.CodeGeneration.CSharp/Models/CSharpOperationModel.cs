@@ -228,7 +228,10 @@ namespace NSwag.CodeGeneration.CSharp.Models
         protected override string ResolveParameterType(OpenApiParameter parameter)
         {
             var schema = parameter.ActualSchema;
-
+            if (schema.Properties.Count > 0)
+            {
+                return base.ResolveParameterType(parameter);
+            }
             if (parameter.IsBinaryBodyParameter)
             {
                 if (_settings is CSharpControllerGeneratorSettings controllerSettings)
